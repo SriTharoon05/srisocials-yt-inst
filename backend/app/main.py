@@ -96,9 +96,11 @@ async def on_startup():
 
 @app.on_event("shutdown")
 async def on_shutdown():
-    app.state.maintenance_task.cancel()
-    with suppress(asyncio.CancelledError):
-        await app.state.maintenance_task
+    task = getattr(app.state, "maintenance_task", None)
+    if task is not None:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
 
 
 @app.get("/health")

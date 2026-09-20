@@ -196,9 +196,11 @@ def publish(video_id: int, body: PublishBody, session: Session = Depends(get_ses
         session.refresh(video)
         if video.status == "published":
             return {"status": "published", "url": video.published_url}
+        if isinstance(exc, yt_service.UploadNotStarted):
+            external_publish_started = False
         video.status = "publish_unknown" if external_publish_started else "approved"
         video.publish_error = ("Publish result is uncertain. Check the destination before resetting; do not upload a duplicate."
-                               if external_publish_started else (str(exc.detail) if isinstance(exc, HTTPException) else "Publishing failed before posting. Check connection, storage and media format, then retry."))
+                               if external_publish_started else (str(exc) if isinstance(exc, yt_service.UploadNotStarted) else str(exc.detail) if isinstance(exc, HTTPException) else "Publishing failed before posting. Check connection, storage and media format, then retry."))
         session.add(video)
         session.commit()
         raise HTTPException(502, video.publish_error) from None

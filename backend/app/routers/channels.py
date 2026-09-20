@@ -25,9 +25,18 @@ def channel_analytics(channel_id: int, start_date: date | None = None, end_date:
     channel = session.get(Channel, channel_id)
     if not channel:
         raise HTTPException(404, "Channel not found")
-    if channel.platform != "youtube" or not channel.is_connected:
-        raise HTTPException(400, "Choose a connected YouTube channel")
-    result = channel_report(channel, start, end)
+    if not channel.is_connected:
+        raise HTTPException(400, "Choose a connected channel")
+    if channel.platform == "instagram":
+        if (end - start).days > 29 or start < date.today() - timedelta(days=89):
+            raise HTTPException(400, "Instagram reports support up to 30 days within the last 90 days.")
+        from app.services import meta
+        result = meta.insights(channel, start, end)
+    elif channel.platform == "youtube":
+        result = channel_report(channel, start, end)
+        result["platform"] = "youtube"
+    else:
+        raise HTTPException(400, "Unsupported analytics platform")
     session.add(channel)
     session.commit()
     return result

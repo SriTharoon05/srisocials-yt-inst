@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from app.config import settings
 from app.crypto import seal, unseal
 
-SCOPES = "instagram_business_basic,instagram_business_content_publish"
+SCOPES = "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights"
 
 
 def decode(response):
@@ -17,6 +17,8 @@ def decode(response):
     if response.is_error or "error" in data:
         # Do not expose provider responses (they can contain tokens or signed URLs).
         code = data.get("error", {}).get("code", "unknown") if isinstance(data.get("error"), dict) else "unknown"
+        if code in (10, 190, 200):
+            raise HTTPException(403, f"Instagram access was denied or expired (code {code}). Reconnect this account with the required permissions; Insights requires instagram_business_manage_insights.")
         raise HTTPException(502, f"Instagram request failed (code {code}); check permissions, media format, or reconnect")
     return data
 
@@ -81,3 +83,26 @@ def publish_container(channel, container, token):
 
 def permalink(media_id, token):
     return graph("GET", media_id, token, fields="permalink").get("permalink")
+
+
+def insights(channel, start, end):
+    from datetime import time, timezone
+    token = refresh(channel)
+    since = int(datetime.combine(start, time.min, tzinfo=timezone.utc).timestamp())
+    until = int(datetime.combine(end + timedelta(days=1), time.min, tzinfo=timezone.utc).timestamp())
+    common = dict(period="day", since=since, until=until)
+    result = graph("GET", f"{channel.external_id}/insights", token,
+                   metric="views,reach,accounts_engaged,total_interactions", metric_type="total_value", **common)
+    summary = {item["name"]: item.get("total_value", {}).get("value") for item in result.get("data", [])}
+    daily = []
+    warnings = []
+    try:
+        series = graph("GET", f"{channel.external_id}/insights", token, metric="reach", metric_type="time_series", **common)
+        for item in series.get("data", []):
+            for value in item.get("values", []):
+                daily.append({"day": value.get("end_time", "")[:10], "reach": value.get("value")})
+    except HTTPException:
+        warnings.append("Daily reach is unavailable for this account or date range.")
+    return {"platform": "instagram", "channel": {"id": channel.id, "name": channel.display_name},
+            "start_date": start.isoformat(), "end_date": end.isoformat(), "summary": summary or None,
+            "daily": daily, "warnings": warnings}

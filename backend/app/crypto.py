@@ -1,4 +1,4 @@
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from app.config import settings
 
 
@@ -15,4 +15,7 @@ def unseal(value):
         return None
     if not value.startswith("enc:"):
         raise RuntimeError("Legacy plaintext token: reconnect this channel")
-    return Fernet(settings.token_encryption_key.encode()).decrypt(value[4:].encode()).decode()
+    try:
+        return Fernet(settings.token_encryption_key.encode()).decrypt(value[4:].encode()).decode()
+    except (InvalidToken, ValueError):
+        raise RuntimeError("Cannot decrypt channel credentials. Use the same TOKEN_ENCRYPTION_KEY locally and on Render, then reconnect this channel.") from None

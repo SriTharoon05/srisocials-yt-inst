@@ -16,6 +16,9 @@ from google.auth.transport.requests import Request as GoogleRequest
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from googleapiclient.errors import HttpError
+from google.auth.exceptions import RefreshError
+import json
 from google_auth_httplib2 import AuthorizedHttp
 import httplib2
 
@@ -84,19 +87,30 @@ def fetch_channel_identity(creds: Credentials) -> dict:
     }
 
 
+class UploadNotStarted(ValueError):
+    """A definite failure before a video could be accepted by YouTube."""
+
+
 def upload_video(channel: Channel, file_path: str, title: str, description: str,
                   privacy_status: str = "private", made_for_kids: bool = False) -> dict:
     """Uploads a reviewed video to the given channel's YouTube account.
     Always uses the channel's own stored credentials — this is what makes the
     'each Publish button uploads to the correct channel' requirement safe."""
-    creds = refresh_if_needed(channel)
-    if privacy_status not in ("private", "unlisted", "public"):
-        raise ValueError("Invalid YouTube visibility")
-    identity = fetch_channel_identity(creds)
-    if identity.get("external_id") != channel.external_id:
-        raise ValueError("Authorized YouTube channel does not match the destination; reconnect")
-    channel.authorized_at = datetime.utcnow()
-    yt = client(creds)
+    try:
+        creds = refresh_if_needed(channel)
+        if privacy_status not in ("private", "unlisted", "public"):
+            raise ValueError("Invalid YouTube visibility")
+        identity = fetch_channel_identity(creds)
+        if identity.get("external_id") != channel.external_id:
+            raise ValueError("Authorized YouTube channel does not match the destination; reconnect")
+        channel.authorized_at = datetime.utcnow()
+        yt = client(creds)
+    except (RuntimeError, ValueError) as exc:
+        raise UploadNotStarted(str(exc)) from None
+    except RefreshError:
+        raise UploadNotStarted("YouTube authorization expired. Reconnect this channel.") from None
+    except Exception:
+        raise UploadNotStarted("YouTube connection check failed before uploading. Check the connection and retry.") from None
 
     body = {
         "snippet": {
@@ -109,12 +123,26 @@ def upload_video(channel: Channel, file_path: str, title: str, description: str,
             "selfDeclaredMadeForKids": made_for_kids,
         },
     }
-    media = MediaFileUpload(file_path, chunksize=1024 * 1024, resumable=True, mimetype="video/mp4")
-    request = yt.videos().insert(part="snippet,status", body=body, media_body=media)
+    try:
+        media = MediaFileUpload(file_path, chunksize=1024 * 1024, resumable=True, mimetype="video/mp4")
+        request = yt.videos().insert(part="snippet,status", body=body, media_body=media)
+    except Exception:
+        raise UploadNotStarted("Could not prepare the YouTube upload. Check the source file and metadata before retrying.") from None
 
     response = None
     while response is None:
-        status_, response = request.next_chunk()
+        try:
+            status_, response = request.next_chunk()
+        except HttpError as exc:
+            if exc.resp.status in (400, 401, 403):
+                try:
+                    reason = json.loads(exc.content).get("error", {}).get("errors", [{}])[0].get("reason", "rejected")
+                except (ValueError, KeyError, IndexError):
+                    reason = "rejected"
+                allowed = {"quotaExceeded", "uploadLimitExceeded", "forbidden", "insufficientPermissions", "invalidTitle", "invalidDescription", "youtubeSignupRequired"}
+                safe_reason = reason if reason in allowed else "request rejected"
+                raise UploadNotStarted(f"YouTube rejected the upload ({safe_reason}, HTTP {exc.resp.status}). Check account permissions, quota, or metadata before retrying.") from None
+            raise
 
     video_id = response["id"]
     return {
