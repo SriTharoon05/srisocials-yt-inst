@@ -4,7 +4,7 @@ import "./legal.css";
 
 const pages = {
   "/privacy": {title: "Privacy policy", content: <>
-<p>srisocials is an internal team video review and publishing service. We use YouTube API Services and the Instagram API.</p>
+<p>Sri Socials Publisher is an internal team video review and publishing service. We use YouTube API Services and the Instagram API.</p>
     <p>We store team usernames, display names, password hashes, submitted videos, titles, descriptions, review decisions, destination account identifiers and encrypted OAuth tokens. Administrators can review team submissions. We use these data only for authentication, review and publishing to accounts explicitly connected by their owners. We do not sell data or use it for advertising.</p>
     <p>Render processes backend requests, Supabase stores application data and submitted videos, and Vercel hosts the dashboards. Approved videos and their metadata are sent to the selected Google/YouTube or Meta/Instagram account when an administrator clicks Publish. YouTube uploads default to Private and use the visibility explicitly selected by the administrator; Instagram Reels are public. Temporary signed file links let authorized reviewers and Instagram fetch videos. If the operator configures a public storage bucket, anyone with a source file URL can access that file.</p>
     <p>When an administrator requests a report, we read authorized YouTube channel analytics including views, watch time, average view duration, subscriber changes and top videos. Instagram Insights reads views, reach, engaged accounts and interactions. Reports are displayed in the administrator's browser and are not cached in our database. Analytics and Insights access can be revoked with the channel connection.</p>
@@ -35,7 +35,7 @@ export default function LegalPage({path}) {
   return <div className="policy-page">
     <header className="policy-header"><a href="/" aria-label="Back to workspace"><Brand/></a><a className="button" href="/">Back to workspace</a></header>
     <main className="policy-main">
-      <nav className="policy-nav" aria-label="Legal information">
+      <nav className="policy-nav" aria-label="Legal information"><a href="/about">About the app</a>
         {Object.entries(pages).map(([href, item]) => <a key={href} href={href} aria-current={href===path?'page':undefined}>{item.title}</a>)}
       </nav>
       <article className="policy-card"><span className="eyebrow">SRI SOCIALS PUBLISHER</span><h1>{page.title}</h1>
