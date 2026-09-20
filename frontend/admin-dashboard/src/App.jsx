@@ -42,7 +42,7 @@ function Shell({children}){
 
   </aside><header className="topbar"><div className="breadcrumb">Workspace<span>/</span><strong>{title}</strong></div><span className="workspace-label"><span className="dot"/>Admin workspace</span></header>
 
-  <main className="layout">{children}</main><LegalLinks base={API_BASE}/></div>;
+  <main className="layout">{children}</main><LegalLinks/></div>;
 
 }
 
@@ -66,7 +66,7 @@ function LoginPage(){
 
     <Notice message={error?{text:error}:null}/><button className="primary" disabled={busy}>{busy?<span className="spinner"/>:null}{busy?'Signing in…':'Sign in to your workspace'}<Icon name="arrow"/></button>
 
-  </form><div className="login-lock"><Icon name="lock" size={12}/>A private workspace for your team.</div></div><LegalLinks base={API_BASE}/></main></div>;
+  </form><div className="login-lock"><Icon name="lock" size={12}/>A private workspace for your team.</div></div><LegalLinks/></main></div>;
 
 }
 

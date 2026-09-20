@@ -19,8 +19,8 @@ const paths = {
   close: <path d="m6 6 12 12M6 18 18 6"/>,
 };
 export function Icon({name="film",size=20,...props}) {return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>{paths[name] || paths.film}</svg>;}
-export function Brand(){return <div className="brand"><span className="brand-symbol"><Icon name="play" size={21}/></span><span>sri<span className="brand-light">socials</span><small>THE CONTENT WORKSPACE</small></span></div>;}
-export function LegalLinks({base}){return <footer className="legal"><span>Made for stories worth sharing.</span><div><a href={`${base}/privacy`} target="_blank" rel="noreferrer">Privacy</a><a href={`${base}/terms`} target="_blank" rel="noreferrer">Terms</a><a href={`${base}/data-deletion`} target="_blank" rel="noreferrer">Data & deletion</a></div></footer>;}
+export function Brand(){return <div className="brand"><span className="brand-symbol"><Icon name="play" size={21}/></span><span><span className="brand-light">Sri Socials Publisher</span><small>THE CONTENT WORKSPACE</small></span></div>;}
+export function LegalLinks(){return <footer className="legal"><span>Made for stories worth sharing.</span><div><a href="/privacy" target="_blank" rel="noreferrer">Privacy</a><a href="/terms" target="_blank" rel="noreferrer">Terms</a><a href="/data-deletion" target="_blank" rel="noreferrer">Data & deletion</a></div></footer>;}
 export function Empty({icon="film",title="A little quiet here",children}){return <div className="empty"><span className="empty-icon"><Icon name={icon} size={28}/></span><h3>{title}</h3><p>{children}</p></div>;}
 export function Notice({message}){return message ? <div role="status" className={`notice ${message.type || "error"}`}><Icon name={message.type==="success"?"check":"clock"}/><span>{message.text || message}</span></div> : null;}
 export function Stat({icon,label,value,note}){return <div className="stat"><div className="stat-top"><span>{label}</span><Icon name={icon}/></div><strong>{value}</strong><small>{note}</small></div>;}
